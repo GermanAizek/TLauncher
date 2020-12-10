@@ -3,9 +3,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
-int __stdcall sub_4013B0(HINSTANCE hInstance, int, char *, int nCmdShow); // idb
-BOOL __stdcall EnumFunc(HWND, LPARAM); // idb
-void __stdcall TimerFunc(HWND, UINT, UINT, DWORD); // idb
+int CALLBACK sub_4013B0(HINSTANCE hInstance, int, char *, int nCmdShow); // idb
+BOOL CALLBACK EnumFunc(HWND, LPARAM); // idb
+void CALLBACK TimerFunc(HWND, UINT, UINT, DWORD); // idb
 FILE *sub_401C10();
 int __cdecl sub_401C30(char *, char *, size_t); // idb
 FILE *sub_401ED0();
@@ -82,7 +82,7 @@ const CHAR File; // idb
 
 
 //----- (004013B0) --------------------------------------------------------
-int __stdcall sub_4013B0(HINSTANCE hInstance, int a2, char *a3, int nCmdShow)
+int CALLBACK sub_4013B0(HINSTANCE hInstance, int a2, char *a3, int nCmdShow)
 {
   int v4; // eax@1
   signed int v6; // edi@5
@@ -256,7 +256,7 @@ BOOL CALLBACK EnumFunc(HWND hWnd, LPARAM a2)
 // 4122B8: using guessed type int dword_4122B8;
 
 //----- (004019E0) --------------------------------------------------------
-void __stdcall TimerFunc(HWND hWnd, UINT a2, UINT a3, DWORD a4)
+void CALLBACK TimerFunc(HWND hWnd, UINT a2, UINT a3, DWORD a4)
 {
   if ( dword_40A014 )
   {
@@ -2492,7 +2492,7 @@ int __cdecl sub_405D30(char *a1)
   if ( v7 )
   {
     v8 = GetCurrentProcess();
-    ((void (__stdcall *)(HANDLE, int *))v7)(v8, &dword_40A020);
+    ((void (CALLBACK *)(HANDLE, int *))v7)(v8, &dword_40A020);
   }
   if ( dword_40A090 )
   {
@@ -2757,7 +2757,7 @@ LABEL_62:
   }
   return 0;
 }
-// 406F60: using guessed type int __stdcall GlobalMemoryStatusEx(uint32_t);
+// 406F60: using guessed type int CALLBACK GlobalMemoryStatusEx(uint32_t);
 // 40A020: using guessed type int dword_40A020;
 // 40A024: using guessed type int dword_40A024;
 // 40A028: using guessed type int dword_40A028;

@@ -239,24 +239,18 @@ BOOL CALLBACK MyEnumProc(HWND hWnd, LPARAM lParam)
     return TRUE;
 }
 */
-//----- (00401960) --------------------------------------------------------
-BOOL __stdcall EnumFunc(HWND hWnd, LPARAM a2)
+// https://github.com/wswm2009/DLLSrc_MFC/blob/ef37d8bd549baacbb4201e9d20590fdc059353dd/MfcDLLHook/MfcDLLHook/MainDlg.cpp
+BOOL CALLBACK EnumFunc(HWND hWnd, LPARAM a2)
 {
-  BOOL result; // eax@2
-  DWORD dwProcessId; // [sp+10h] [bp-8h]@1
-
-  GetWindowThreadProcessId(hWnd, &dwProcessId);
-  if ( dword_4122B8 == dwProcessId && GetWindowLongA(hWnd, -16) & 0x10000000 )
-  {
-    dword_40A014 = 0;
-    ShowWindow(::hWnd, 0);
-    result = 0;
-  }
-  else
-  {
-    result = 1;
-  }
-  return result;
+    DWORD dwProcessId;
+    GetWindowThreadProcessId(hWnd, &dwProcessId);
+    if ( dword_4122B8 == dwProcessId && (GetWindowLongA(hWnd, GWL_STYLE) & WS_VISIBLE))
+    {
+        dword_40A014 = 0; // pInfo->hWnd
+        ShowWindow(hWnd, 0);
+        return FALSE;
+    }
+    return TRUE;
 }
 // 40A014: using guessed type int dword_40A014;
 // 4122B8: using guessed type int dword_4122B8;

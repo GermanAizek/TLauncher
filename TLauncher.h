@@ -3,10 +3,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
-int CALLBACK sub_4013B0(HINSTANCE hInstance, int, char*, int nCmdShow); // idb
-BOOL CALLBACK EnumFunc(HWND, LPARAM); // idb
-void CALLBACK TimerFunc(HWND, UINT, UINT, DWORD); // idb
-FILE* sub_401C10();
+int CALLBACK sub_4013B0(HINSTANCE hInstance, int, char*, int nCmdShow);
+BOOL CALLBACK EnumFunc(HWND, LPARAM);
+void CALLBACK TimerFunc(HWND, UINT, UINT, DWORD);
+FILE* file_close();
 int __cdecl sub_401C30(char*, char*, size_t); // idb
 FILE* sub_401ED0();
 signed int __cdecl sub_4020C0(int a1, uint8_t* a2);

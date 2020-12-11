@@ -1,9 +1,11 @@
 #include "TLauncher.h"
 
+FILE* file;
+
 int dword_407070[] = { 4294967295 }; // weak
 int dword_407074[] = { 0 }; // weak
 int dword_408000 = 60; // weak
-int (*off_408030)[97] = &dword_40707C; // weak
+int (*off_408030)[97] = // &dword_40707C; // weak
 const CHAR WindowName = '\0'; // idb
 int dword_40A010; // weak
 int dword_40A014; // weak
@@ -16,7 +18,6 @@ int dword_40A040; // weak
 int dword_40A060; // weak
 HWND hWnd; // idb
 int dword_40A080; // weak
-FILE *dword_40A090; // idb
 char byte_40A0A0; // idb
 char byte_40A1A3[]; // weak
 char word_40A1A4[]; // idb
@@ -92,7 +93,7 @@ LABEL_48:
     }
     ShowWindow(v14, 5);
     SetForegroundWindow(v14);
-    sub_401C10();
+    file_close();
     return 2;
   }
   if ( v4 != 1 )
@@ -163,14 +164,14 @@ LABEL_15:
       TranslateMessage(&Msg);
       DispatchMessageA(&Msg);
     }
-    if ( dword_40A010 && ExitCode && dword_40A090 )
-      fprintf(dword_40A090, "Exit code:\t%d, restarting the application!\n", ExitCode);
+    if ( dword_40A010 && ExitCode && file )
+      fprintf(file, "Exit code:\t%d, restarting the application!\n", ExitCode);
     sub_406830();
     if ( !dword_40A010 || !ExitCode )
     {
-      if ( dword_40A090 )
-        fprintf(dword_40A090, "Exit code:\t%d\n", ExitCode);
-      sub_401C10();
+      if ( file )
+        fprintf(file, "Exit code:\t%d\n", ExitCode);
+      file_close();
       return ExitCode;
     }
 LABEL_41:
@@ -179,10 +180,10 @@ LABEL_42:
     if ( !v8 )
       goto LABEL_13;
   }
-  if ( dword_40A090 )
-    fwrite("Exit code:\t0\n", 1u, 0xDu, dword_40A090);
+  if ( file )
+    fwrite("Exit code:\t0\n", 1u, 0xDu, file);
   sub_406830();
-  sub_401C10();
+  file_close();
   return 0;
 }
 // 408000: using guessed type int dword_408000;
@@ -237,10 +238,10 @@ void CALLBACK TimerFunc(HWND hWnd, UINT a2, UINT a3, DWORD a4)
     else
     {
       dword_40A014 = 0;
-      ShowWindow(::hWnd, 0);
+      ShowWindow(hWnd, 0);
       if ( dword_40A060 && dword_40A080 )
       {
-        KillTimer(hWnd, 1u);
+        KillTimer(hWnd, 1);
         sub_401ED0();
         PostQuitMessage(0);
       }
@@ -249,7 +250,7 @@ void CALLBACK TimerFunc(HWND hWnd, UINT a2, UINT a3, DWORD a4)
   GetExitCodeProcess(hProcess, &ExitCode);
   if ( ExitCode != 259 || !dword_40A014 && !dword_40A018 )
   {
-    KillTimer(::hWnd, 1u);
+    KillTimer(hWnd, 1);
     PostQuitMessage(0);
   }
 }
@@ -259,19 +260,20 @@ void CALLBACK TimerFunc(HWND hWnd, UINT a2, UINT a3, DWORD a4)
 // 40A060: using guessed type int dword_40A060;
 // 40A080: using guessed type int dword_40A080;
 
-//----- (00401C10) --------------------------------------------------------
-FILE *sub_401C10()
+FILE* file_close()
 {
-  FILE *result; // eax@1
-
-  result = dword_40A090;
-  if ( dword_40A090 )
-    result = (FILE *)fclose(dword_40A090);
-  return result;
+    //FILE* ptrFile;
+    //ptrFile = file;
+    if (file)
+    {
+        return fclose(file);
+        //ptrFile = fclose(file);
+    }
+    return NULL;
 }
 
 //----- (00401C30) --------------------------------------------------------
-int __cdecl sub_401C30(char *a1, char *a2, size_t a3)
+int __cdecl sub_401C30(char* cmd, char *a2, size_t a3)
 {
   size_t v3; // eax@2
   FILE *v4; // eax@2
@@ -279,11 +281,10 @@ int __cdecl sub_401C30(char *a1, char *a2, size_t a3)
   int result; // eax@2
   signed int v7; // esi@3
   char v8[272]; // [sp+10h] [bp-8128h]@2
-  CHAR Buffer; // [sp+120h] [bp-8018h]@1
-
-  memset(&Buffer, 0, 0x7FFFu);
-  GetEnvironmentVariableA("Launch4j", &Buffer, 0x7FFFu);
-  if ( strstr(a1, "--l4j-debug") || strstr(&Buffer, "debug") )
+  CHAR buff; // [sp+120h] [bp-8018h]@1
+  memset(&buff, 0, (size_t)RAND_MAX); 
+  GetEnvironmentVariableA("Launch4j", &buff, (size_t)RAND_MAX);
+  if ( strstr(cmd, "--l4j-debug") || strstr(&buff, "debug") )
   {
     memset(v8, 0, 0x104u);
     strncpy(v8, a2, a3);
@@ -293,25 +294,25 @@ int __cdecl sub_401C30(char *a1, char *a2, size_t a3)
     *(uint32_t *)&v8[v3 + 8] = 1869360746;
     *(uint16_t *)&v8[v3 + 12] = 103;
     v4 = fopen(v8, "a");
-    dword_40A090 = v4;
+    file = v4;
     v5 = v4;
     result = 0;
     if ( !v5 )
       return result;
     v7 = 0;
-    if ( strstr(a1, "--l4j-debug-all") || strstr(&Buffer, "debug-all") )
+    if ( strstr(cmd, "--l4j-debug-all") || strstr(&buff, "debug-all") )
       v7 = 1;
     dword_40A028 = v7;
   }
   else
   {
-    v5 = dword_40A090;
+    v5 = file;
   }
   if ( v5 )
   {
     fprintf(v5, "\n\nVersion:\t%s\n", "3.9");
-    if ( dword_40A090 )
-      fprintf(dword_40A090, "CmdLine:\t%s %s\n", a2, a1);
+    if ( file )
+      fprintf(file, "CmdLine:\t%s %s\n", a2, cmd);
   }
   return 1;
 }
@@ -327,13 +328,13 @@ FILE *sub_401ED0()
   CHAR Buffer[4]; // [sp+20h] [bp-8h]@16
 
   v0 = GetLastError();
-  if ( dword_40A090 )
-    fprintf(dword_40A090, "Error msg:\t%s\n", Text);
+  if ( file )
+    fprintf(file, "Error msg:\t%s\n", Text);
   if ( v0 )
   {
     FormatMessageA(0x1300u, 0, v0, 0x400u, Buffer, 0, 0);
-    if ( dword_40A090 )
-      fprintf(dword_40A090, "Error:\t\t%s\n", *(uint32_t *)Buffer);
+    if ( file )
+      fprintf(file, "Error:\t\t%s\n", *(uint32_t *)Buffer);
     v2 = strlen(Text);
     *(uint16_t *)&Text[v2] = 2570;
     Text[v2 + 2] = 0;
@@ -353,13 +354,13 @@ FILE *sub_401ED0()
   }
   if ( File )
   {
-    if ( dword_40A090 )
-      fprintf(dword_40A090, "Open URL:\t%s\n", &File);
+    if ( file )
+      fprintf(file, "Open URL:\t%s\n", &File);
     ShellExecuteA(0, "open", &File, 0, 0, 1);
   }
-  result = dword_40A090;
-  if ( dword_40A090 )
-    result = (FILE *)fclose(dword_40A090);
+  result = file;
+  if ( file )
+    result = (FILE *)fclose(file);
   return result;
 }
 // 40A024: using guessed type int dword_40A024;
@@ -394,9 +395,9 @@ signed int __cdecl sub_4020C0(int a1, uint8_t *a2)
     a2[v5++] = v6;
   }
   while ( v6 );
-  if ( dword_40A028 && dword_40A090 )
+  if ( dword_40A028 && file )
   {
-    fprintf(dword_40A090, "Resource %d:\t%s\n", a1, a2);
+    fprintf(file, "Resource %d:\t%s\n", a1, a2);
     result = 1;
   }
   else
@@ -453,12 +454,12 @@ int __cdecl sub_4021A0(int a1)
         v3 = dword_40A028 == 0;
         if ( dword_40A028 )
         {
-          v3 = dword_40A090 == 0;
-          if ( dword_40A090 )
+          v3 = file == 0;
+          if ( file )
           {
             v17 = a1;
             v18 = v19;
-            fprintf(dword_40A090, "Resource %d:\t%s\n", a1, v19);
+            fprintf(file, "Resource %d:\t%s\n", a1, v19);
           }
         }
       }
@@ -574,13 +575,13 @@ int __cdecl sub_402690(char *a1)
     if ( !v1 )
       SetLastError(0);
   }
-  if ( dword_40A090 )
+  if ( file )
   {
     v2 = "(OK)";
     if ( !v1 )
       v2 = "(not found)";
     v6 = v2;
-    fprintf(dword_40A090, "Check launcher:\t%s %s\n", v7, v2);
+    fprintf(file, "Check launcher:\t%s %s\n", v7, v2);
   }
   return v1;
 }
@@ -653,12 +654,12 @@ LONG __cdecl sub_402920(LPCSTR lpSubKey, int a2)
   CHAR Name; // [sp+150h] [bp-238h]@6
   char SubKey[296]; // [sp+260h] [bp-128h]@6
 
-  if ( dword_40A090 )
+  if ( file )
   {
     v2 = "64";
     if ( !(a2 & 0x100) )
       v2 = "32";
-    fprintf(dword_40A090, "%s-bit search:\t%s...\n", v2, lpSubKey);
+    fprintf(file, "%s-bit search:\t%s...\n", v2, lpSubKey);
   }
   result = RegOpenKeyExA(HKEY_LOCAL_MACHINE, lpSubKey, 0, a2 & 0x100 | 0x20019, &phkResult);
   if ( !result )
@@ -678,8 +679,8 @@ LONG __cdecl sub_402920(LPCSTR lpSubKey, int a2)
       if ( SubKey[v5 - 1] != 92 )
         *(uint16_t *)&SubKey[v5] = 92;
       strcat(SubKey, &Name);
-      if ( dword_40A090 )
-        fprintf(dword_40A090, "Check:\t\t%s\n", SubKey);
+      if ( file )
+        fprintf(file, "Check:\t\t%s\n", SubKey);
       v6 = strchr(&Name, 95);
       if ( v6 && (v7 = v6 + 1, strlen(v6 + 1) <= 2) )
       {
@@ -697,16 +698,16 @@ LONG __cdecl sub_402920(LPCSTR lpSubKey, int a2)
         || strcmp(v12, byte_4124E0) <= 0
         || !sub_4027A0(SubKey, a2) )
       {
-        if ( dword_40A090 )
-          fprintf(dword_40A090, "Ignore:\t\t%s\n", v12);
+        if ( file )
+          fprintf(file, "Ignore:\t\t%s\n", v12);
       }
       else
       {
         strcpy(byte_4124E0, v12);
         strcpy(byte_412560, SubKey);
         dword_4122D4 = a2;
-        if ( dword_40A090 )
-          fprintf(dword_40A090, "Match:\t\t%s\n", v12);
+        if ( file )
+          fprintf(file, "Match:\t\t%s\n", v12);
       }
       cbName = 260;
     }
@@ -750,8 +751,8 @@ int __cdecl sub_402CB0(LPCSTR lpSubKey, int a2)
             v9[v7++] = v8;
           }
           while ( v8 );
-          if ( dword_40A028 && dword_40A090 )
-            fprintf(dword_40A090, "Resource %d:\t%s\n", 30, v9);
+          if ( dword_40A028 && file )
+            fprintf(file, "Resource %d:\t%s\n", 30, v9);
         }
       }
     }
@@ -947,8 +948,8 @@ char *__cdecl sub_403100(char *a1, char *a2, char *a3, int a4)
           }
         }
       }
-      if ( dword_40A090 )
-        fprintf(dword_40A090, "Substitute:\t%s = %s\n", &Name, lpBuffer);
+      if ( file )
+        fprintf(file, "Substitute:\t%s = %s\n", &Name, lpBuffer);
       v4 = (char *)(v27 + 1);
       if ( !*(uint8_t *)(v27 + 1) )
         goto LABEL_30;
@@ -1007,8 +1008,8 @@ int __cdecl sub_4033F0(char *a1, int a2, int a3, int a4, int a5, char *a6)
           v28[v9++] = v10;
         }
         while ( v10 );
-        if ( dword_40A028 && dword_40A090 )
-          fprintf(dword_40A090, "Resource %d:\t%s\n", a2, v28);
+        if ( dword_40A028 && file )
+          fprintf(file, "Resource %d:\t%s\n", a2, v28);
       }
     }
   }
@@ -1035,8 +1036,8 @@ int __cdecl sub_4033F0(char *a1, int a2, int a3, int a4, int a5, char *a6)
           v27[v14++] = v15;
         }
         while ( v15 );
-        if ( dword_40A028 && dword_40A090 )
-          fprintf(dword_40A090, "Resource %d:\t%s\n", a3, v27);
+        if ( dword_40A028 && file )
+          fprintf(file, "Resource %d:\t%s\n", a3, v27);
       }
     }
   }
@@ -1060,11 +1061,11 @@ int __cdecl sub_4033F0(char *a1, int a2, int a3, int a4, int a5, char *a6)
   {
     if ( (((unsigned int)dword_4122D4 >> 8) ^ 1) & (v21 > 1024) )
     {
-      v22 = dword_40A090;
-      if ( dword_40A090 )
+      v22 = file;
+      if ( file )
       {
-        fprintf(dword_40A090, "Heap limit:\tReduced %d MB heap size to 32-bit maximum %d MB\n", v21, 1024);
-        v22 = dword_40A090;
+        fprintf(file, "Heap limit:\tReduced %d MB heap size to 32-bit maximum %d MB\n", v21, 1024);
+        v22 = file;
       }
       v21 = 1024;
       if ( !v22 )
@@ -1072,8 +1073,8 @@ int __cdecl sub_4033F0(char *a1, int a2, int a3, int a4, int a5, char *a6)
     }
     else
     {
-      v22 = dword_40A090;
-      if ( !dword_40A090 )
+      v22 = file;
+      if ( !file )
       {
 LABEL_24:
         strcat(a1, a6);
@@ -1140,8 +1141,8 @@ int __cdecl sub_403790(char *a1, char *a2)
           a1[v5++] = v6;
         }
         while ( v6 );
-        if ( dword_40A028 && dword_40A090 )
-          fprintf(dword_40A090, "Resource %d:\t%s\n", 12, a1);
+        if ( dword_40A028 && file )
+          fprintf(file, "Resource %d:\t%s\n", 12, a1);
         *(uint16_t *)&a1[strlen(a1)] = 32;
       }
     }
@@ -1162,8 +1163,8 @@ int __cdecl sub_403790(char *a1, char *a2)
   result = v9 + 1;
   if ( result )
   {
-    if ( dword_40A090 )
-      fprintf(dword_40A090, "Loading:\t%s\n", v19);
+    if ( file )
+      fprintf(file, "Loading:\t%s\n", v19);
     v11 = strlen(a1);
     v12 = &a1[v11];
     v13 = &a1[v11];
@@ -1260,18 +1261,18 @@ int __cdecl sub_403D20(char *a1, size_t a2)
     v27[v5++] = v6;
   }
   while ( v6 );
-  if ( dword_40A028 && dword_40A090 )
+  if ( dword_40A028 && file )
   {
     v23 = v27;
     v22 = (char *)1;
-    fprintf(dword_40A090, "Resource %d:\t%s\n", 1, v27);
+    fprintf(file, "Resource %d:\t%s\n", 1, v27);
   }
   memset(&v25, 0, 0x8000u);
   sub_403100(&v25, v27, a1, a2);
-  if ( dword_40A090 )
+  if ( file )
   {
     v22 = &v25;
-    fprintf(dword_40A090, "Bundled JRE:\t%s\n", &v25);
+    fprintf(file, "Bundled JRE:\t%s\n", &v25);
   }
   if ( v25 != 92 && v26 != 58 )
   {
@@ -1316,12 +1317,12 @@ int __cdecl sub_403D20(char *a1, size_t a2)
         if ( dword_40A028 )
         {
           v11 = 0;
-          v12 = dword_40A090 == 0;
-          if ( dword_40A090 )
+          v12 = file == 0;
+          if ( file )
           {
             v23 = v24;
             v22 = (char *)29;
-            fprintf(dword_40A090, "Resource %d:\t%s\n", 29, v24);
+            fprintf(file, "Resource %d:\t%s\n", 29, v24);
           }
         }
       }
@@ -1407,8 +1408,8 @@ void sub_4042B0()
             Text[v3++] = v4;
           }
           while ( v4 );
-          if ( dword_40A028 && dword_40A090 )
-            fprintf(dword_40A090, "Resource %d:\t%s\n", 103, Text);
+          if ( dword_40A028 && file )
+            fprintf(file, "Resource %d:\t%s\n", 103, Text);
         }
       }
     }
@@ -1457,8 +1458,8 @@ void sub_4042B0()
               v24[v22++] = v23;
             }
             while ( v23 );
-            if ( dword_40A028 && dword_40A090 )
-              fprintf(dword_40A090, "Resource %d:\t%s\n", 104, v24);
+            if ( dword_40A028 && file )
+              fprintf(file, "Resource %d:\t%s\n", 104, v24);
             *(uint16_t *)&Text[strlen(Text)] = 10;
             strcat(Text, v24);
           }
@@ -1488,8 +1489,8 @@ void sub_4042B0()
           while ( v13 );
           if ( dword_40A028 )
           {
-            if ( dword_40A090 )
-              fprintf(dword_40A090, "Resource %d:\t%s\n", 21, &File);
+            if ( file )
+              fprintf(file, "Resource %d:\t%s\n", 21, &File);
           }
         }
       }
@@ -1518,8 +1519,8 @@ void sub_4042B0()
             Text[v17++] = v18;
           }
           while ( v18 );
-          if ( dword_40A028 && dword_40A090 )
-            fprintf(dword_40A090, "Resource %d:\t%s\n", 102, Text);
+          if ( dword_40A028 && file )
+            fprintf(file, "Resource %d:\t%s\n", 102, Text);
         }
       }
     }
@@ -1615,12 +1616,12 @@ int __cdecl sub_404740(char *a1, int a2)
         v4 = dword_40A028 == 0;
         if ( dword_40A028 )
         {
-          v4 = dword_40A090 == 0;
-          if ( dword_40A090 )
+          v4 = file == 0;
+          if ( file )
           {
             v48 = v53;
             v47 = (char *)32;
-            fprintf(dword_40A090, "Resource %d:\t%s\n", 32, v53);
+            fprintf(file, "Resource %d:\t%s\n", 32, v53);
           }
         }
       }
@@ -1660,11 +1661,11 @@ int __cdecl sub_404740(char *a1, int a2)
           *(&byte_4122E0 + v15++) = v16;
         }
         while ( v16 );
-        if ( dword_40A028 && dword_40A090 )
+        if ( dword_40A028 && file )
         {
           v48 = &byte_4122E0;
           v47 = (char *)2;
-          fprintf(dword_40A090, "Resource %d:\t%s\n", 2, &byte_4122E0);
+          fprintf(file, "Resource %d:\t%s\n", 2, &byte_4122E0);
         }
       }
     }
@@ -1703,11 +1704,11 @@ int __cdecl sub_404740(char *a1, int a2)
           *(&byte_412360 + v22++) = v23;
         }
         while ( v23 );
-        if ( dword_40A028 && dword_40A090 )
+        if ( dword_40A028 && file )
         {
           v48 = &byte_412360;
           v47 = (char *)3;
-          fprintf(dword_40A090, "Resource %d:\t%s\n", 3, &byte_412360);
+          fprintf(file, "Resource %d:\t%s\n", 3, &byte_412360);
         }
       }
     }
@@ -1751,11 +1752,11 @@ int __cdecl sub_404740(char *a1, int a2)
               v52[v31++] = v32;
             }
             while ( v32 );
-            if ( dword_40A028 && dword_40A090 )
+            if ( dword_40A028 && file )
             {
               v48 = v52;
               v47 = (char *)18;
-              fprintf(dword_40A090, "Resource %d:\t%s\n", 18, v52);
+              fprintf(file, "Resource %d:\t%s\n", 18, v52);
             }
           }
         }
@@ -1798,14 +1799,14 @@ int __cdecl sub_404740(char *a1, int a2)
       {
 LABEL_101:
         strcpy(word_40A1A4, byte_412664);
-        if ( dword_40A090 )
+        if ( file )
         {
           v36 = "64";
           if ( !(BYTE1(dword_4122D4) & 1) )
             v36 = "32";
           v48 = (char *)v36;
           v47 = byte_4124E0;
-          fprintf(dword_40A090, "Runtime used:\t%s (%s-bit)\n", byte_4124E0, v36);
+          fprintf(file, "Runtime used:\t%s (%s-bit)\n", byte_4124E0, v36);
         }
         return v50;
       }
@@ -1838,11 +1839,11 @@ LABEL_101:
             v52[v40++] = v41;
           }
           while ( v41 );
-          if ( dword_40A028 && dword_40A090 )
+          if ( dword_40A028 && file )
           {
             v48 = v52;
             v47 = (char *)18;
-            fprintf(dword_40A090, "Resource %d:\t%s\n", 18, v52);
+            fprintf(file, "Resource %d:\t%s\n", 18, v52);
           }
         }
       }
@@ -1885,14 +1886,14 @@ LABEL_101:
     {
 LABEL_103:
       strcpy(word_40A1A4, byte_412664);
-      if ( dword_40A090 )
+      if ( file )
       {
         v45 = "64";
         if ( !(BYTE1(dword_4122D4) & 1) )
           v45 = "32";
         v48 = (char *)v45;
         v47 = byte_4124E0;
-        fprintf(dword_40A090, "Runtime used:\t%s (%s-bit)\n", byte_4124E0, v45);
+        fprintf(file, "Runtime used:\t%s (%s-bit)\n", byte_4124E0, v45);
       }
       v49 = 1;
       v27 = 1;
@@ -1947,8 +1948,8 @@ char *__cdecl sub_4051E0(char *a1, int a2)
           v10[v5++] = v6;
         }
         while ( v6 );
-        if ( dword_40A028 && dword_40A090 )
-          fprintf(dword_40A090, "Resource %d:\t%s\n", 19, v10);
+        if ( dword_40A028 && file )
+          fprintf(file, "Resource %d:\t%s\n", 19, v10);
       }
     }
   }
@@ -1966,8 +1967,8 @@ char *__cdecl sub_4051E0(char *a1, int a2)
     *v9 = 0;
     Value = 0;
     sub_403100(&Value, v9 + 1, a1, a2);
-    if ( dword_40A090 )
-      fprintf(dword_40A090, "Set var:\t%s = %s\n", v8, &Value);
+    if ( file )
+      fprintf(file, "Set var:\t%s = %s\n", v8, &Value);
     SetEnvironmentVariableA(v8, &Value);
   }
   return result;
@@ -2061,12 +2062,12 @@ size_t __cdecl sub_405390(char *a1, int a2)
         if ( dword_40A028 )
         {
           v4 = 0;
-          v5 = dword_40A090 == 0;
-          if ( dword_40A090 )
+          v5 = file == 0;
+          if ( file )
           {
             v44 = v47;
             v43 = (char *)17;
-            fprintf(dword_40A090, "Resource %d:\t%s\n", 17, v47);
+            fprintf(file, "Resource %d:\t%s\n", 17, v47);
           }
         }
       }
@@ -2108,11 +2109,11 @@ size_t __cdecl sub_405390(char *a1, int a2)
           v49[v17++] = v18;
         }
         while ( v18 );
-        if ( dword_40A028 && dword_40A090 )
+        if ( dword_40A028 && file )
         {
           v44 = v49;
           v43 = (char *)14;
-          fprintf(dword_40A090, "Resource %d:\t%s\n", 14, v49);
+          fprintf(file, "Resource %d:\t%s\n", 14, v49);
         }
       }
     }
@@ -2168,11 +2169,11 @@ LABEL_52:
     *(&byte_40A0A0 + v22++) = v23;
   }
   while ( v23 );
-  if ( dword_40A028 && dword_40A090 )
+  if ( dword_40A028 && file )
   {
     v44 = &byte_40A0A0;
     v43 = (char *)15;
-    fprintf(dword_40A090, "Resource %d:\t%s\n", 15, &byte_40A0A0);
+    fprintf(file, "Resource %d:\t%s\n", 15, &byte_40A0A0);
   }
   v24 = FindResourceExA(hModule, (LPCSTR)0xA, (LPCSTR)0x10, 0x400u);
   if ( v24 )
@@ -2190,11 +2191,11 @@ LABEL_52:
           v51[v27++] = v28;
         }
         while ( v28 );
-        if ( dword_40A028 && dword_40A090 )
+        if ( dword_40A028 && file )
         {
           v44 = v51;
           v43 = (char *)16;
-          fprintf(dword_40A090, "Resource %d:\t%s\n", 16, v51);
+          fprintf(file, "Resource %d:\t%s\n", 16, v51);
         }
         goto LABEL_36;
       }
@@ -2205,8 +2206,8 @@ LABEL_52:
     SetLastError(0);
     v51[0] = 0;
   }
-  if ( dword_40A090 )
-    fwrite("Info:\t\tClasspath not defined.\n", 1u, 0x1Eu, dword_40A090);
+  if ( file )
+    fwrite("Info:\t\tClasspath not defined.\n", 1u, 0x1Eu, file);
 LABEL_36:
   sub_403100(&v50, v51, a1, v45);
   v29 = strlen(dword_40A2A8);
@@ -2232,10 +2233,10 @@ LABEL_66:
 LABEL_38:
   for ( i = strtok(&v50, ";"); i; i = strtok(0, ";") )
   {
-    if ( dword_40A090 )
+    if ( file )
     {
       v43 = i;
-      fprintf(dword_40A090, "Add classpath:\t%s\n", i, v44);
+      fprintf(file, "Add classpath:\t%s\n", i, v44);
       if ( strpbrk(i, "*?") )
       {
 LABEL_41:
@@ -2258,13 +2259,13 @@ LABEL_41:
               strcpy(v33, v46.name);
               strcat(dword_40A2A8, v48);
               *(uint16_t *)&dword_40A2A8[strlen(dword_40A2A8)] = 59;
-              if ( dword_40A090 )
+              if ( file )
                 break;
               if ( findnext(v34, &v46) )
                 goto LABEL_48;
             }
             v43 = v48;
-            fprintf(dword_40A090, "      \"      :\t%s\n", v48, v44);
+            fprintf(file, "      \"      :\t%s\n", v48, v44);
           }
           while ( !findnext(v34, &v46) );
         }
@@ -2324,8 +2325,8 @@ void __cdecl sub_405B60(char *a1)
           v8[v4++] = v5;
         }
         while ( v5 );
-        if ( dword_40A028 && dword_40A090 )
-          fprintf(dword_40A090, "Resource %d:\t%s\n", 13, v8);
+        if ( dword_40A028 && file )
+          fprintf(file, "Resource %d:\t%s\n", 13, v8);
         *(uint16_t *)&dword_40A2A8[strlen(dword_40A2A8)] = 32;
         strcat(dword_40A2A8, v8);
       }
@@ -2462,12 +2463,12 @@ int __cdecl sub_405D30(char *a1)
     v8 = GetCurrentProcess();
     ((void (CALLBACK *)(HANDLE, int *))v7)(v8, &dword_40A020);
   }
-  if ( dword_40A090 )
+  if ( file )
   {
     v9 = "yes";
     if ( !dword_40A020 )
       v9 = "no";
-    fprintf(dword_40A090, "WOW64:\t\t%s\n", v9);
+    fprintf(file, "WOW64:\t\t%s\n", v9);
   }
   v10 = FindResourceExA(hModule, (LPCSTR)0xA, (LPCSTR)0xA, 0x400u);
   if ( v10 )
@@ -2485,8 +2486,8 @@ int __cdecl sub_405D30(char *a1)
           Caption[v13++] = v14;
         }
         while ( v14 );
-        if ( dword_40A028 && dword_40A090 )
-          fprintf(dword_40A090, "Resource %d:\t%s\n", 10, Caption);
+        if ( dword_40A028 && file )
+          fprintf(file, "Resource %d:\t%s\n", 10, Caption);
       }
     }
   }
@@ -2511,8 +2512,8 @@ int __cdecl sub_405D30(char *a1)
           *((uint8_t *)&File + v18++) = v19;
         }
         while ( v19 );
-        if ( dword_40A028 && dword_40A090 )
-          fprintf(dword_40A090, "Resource %d:\t%s\n", 22, &File);
+        if ( dword_40A028 && file )
+          fprintf(file, "Resource %d:\t%s\n", 22, &File);
       }
     }
   }
@@ -2527,8 +2528,8 @@ int __cdecl sub_405D30(char *a1)
     SetLastError(0);
     Text[0] = 0;
 LABEL_65:
-    v39 = dword_40A090;
-    if ( !dword_40A090 )
+    v39 = file;
+    if ( !file )
       return 0;
     v49 = "Startup error message not defined.";
     goto LABEL_62;
@@ -2546,8 +2547,8 @@ LABEL_65:
     Text[v23++] = v24;
   }
   while ( v24 );
-  if ( dword_40A028 && dword_40A090 )
-    fprintf(dword_40A090, "Resource %d:\t%s\n", 101, Text);
+  if ( dword_40A028 && file )
+    fprintf(file, "Resource %d:\t%s\n", 101, Text);
   memset(Name, 0, 0x80u);
   v25 = FindResourceExA(hModule, (LPCSTR)0xA, (LPCSTR)0x17, 0x400u);
   if ( v25 )
@@ -2565,8 +2566,8 @@ LABEL_65:
           Name[v28++] = v29;
         }
         while ( v29 );
-        if ( dword_40A028 && dword_40A090 )
-          fprintf(dword_40A090, "Resource %d:\t%s\n", 23, Name);
+        if ( dword_40A028 && file )
+          fprintf(file, "Resource %d:\t%s\n", 23, Name);
       }
     }
   }
@@ -2583,9 +2584,9 @@ LABEL_65:
     CreateMutexA(&MutexAttributes, 0, Name);
     if ( GetLastError() == 183 )
     {
-      if ( dword_40A090 )
+      if ( file )
       {
-        fprintf(dword_40A090, "Error:\t\t%s\n", "Instance already exists.");
+        fprintf(file, "Error:\t\t%s\n", "Instance already exists.");
         v1 = 183;
       }
       else
@@ -2614,16 +2615,16 @@ LABEL_65:
           v56[v33++] = v34;
         }
         while ( v34 );
-        if ( dword_40A028 && dword_40A090 )
-          fprintf(dword_40A090, "Resource %d:\t%s\n", 8, v56);
+        if ( dword_40A028 && file )
+          fprintf(file, "Resource %d:\t%s\n", 8, v56);
         strncpy(v57, &Filename, v4);
         v35 = strlen(v57);
         if ( v57[v35 - 1] != 92 )
           *(uint16_t *)&v57[v35] = 92;
         strcat(v57, v56);
         chdir(v57);
-        if ( dword_40A090 )
-          fprintf(dword_40A090, "Working dir:\t%s\n", v57);
+        if ( file )
+          fprintf(file, "Working dir:\t%s\n", v57);
       }
     }
   }
@@ -2667,8 +2668,8 @@ LABEL_65:
               v54[v43++] = v44;
             }
             while ( v44 );
-            if ( dword_40A028 && dword_40A090 )
-              fprintf(dword_40A090, "Resource %d:\t%s\n", 20, v54);
+            if ( dword_40A028 && file )
+              fprintf(file, "Resource %d:\t%s\n", 20, v54);
           }
         }
       }
@@ -2701,9 +2702,9 @@ LABEL_65:
       sub_403100(dword_40A2A8, &v50, &Filename, v4);
       sub_405390(&Filename, v4);
       sub_405B60(a1);
-      if ( dword_40A090
-        && (fprintf(dword_40A090, "Launcher:\t%s\n", word_40A1A4), dword_40A090)
-        && (fprintf(dword_40A090, "Launcher args:\t%s\n", dword_40A2A8), (v46 = dword_40A090) != 0) )
+      if ( file
+        && (fprintf(file, "Launcher:\t%s\n", word_40A1A4), file)
+        && (fprintf(file, "Launcher args:\t%s\n", dword_40A2A8), (v46 = file) != 0) )
       {
         v47 = strlen(dword_40A2A8);
         fprintf(v46, "Args length:\t%d/32768 chars\n", v47);
@@ -2716,8 +2717,8 @@ LABEL_65:
       return v1;
     }
   }
-  v39 = dword_40A090;
-  if ( dword_40A090 )
+  v39 = file;
+  if ( file )
   {
     v49 = "appendToPathVar failed.";
 LABEL_62:

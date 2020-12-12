@@ -1,6 +1,7 @@
 #include "TLauncher.h"
 
 FILE* file;
+PROCESS_INFORMATION pi;
 
 int dword_407070[] = { 4294967295 }; // weak
 int dword_407074[] = { 0 }; // weak
@@ -26,7 +27,6 @@ char dword_40A2A8[]; // idb
 int dword_40A2AC; // weak
 int dword_40A2B0; // weak
 char byte_40A2B4[]; // weak
-HANDLE hProcess; // idb
 HANDLE hObject; // idb
 int dword_4122B8; // weak
 DWORD dwCreationFlags; // idb
@@ -166,7 +166,7 @@ LABEL_15:
     }
     if ( dword_40A010 && ExitCode && file )
       fprintf(file, "Exit code:\t%d, restarting the application!\n", ExitCode);
-    sub_406830();
+    close_handle();
     if ( !dword_40A010 || !ExitCode )
     {
       if ( file )
@@ -182,7 +182,7 @@ LABEL_42:
   }
   if ( file )
     fwrite("Exit code:\t0\n", 1u, 0xDu, file);
-  sub_406830();
+  close_handle();
   file_close();
   return 0;
 }
@@ -247,7 +247,7 @@ void CALLBACK TimerFunc(HWND hWnd, UINT a2, UINT a3, DWORD a4)
       }
     }
   }
-  GetExitCodeProcess(hProcess, &ExitCode);
+  GetExitCodeProcess(pi, &ExitCode);
   if ( ExitCode != 259 || !dword_40A014 && !dword_40A018 )
   {
     KillTimer(hWnd, 1);
@@ -2742,53 +2742,50 @@ LABEL_62:
 // 405D30: using guessed type char var_2C8[272];
 // 405D30: using guessed type CHAR Buffer[32768];
 
-//----- (00406830) --------------------------------------------------------
-BOOL sub_406830()
+BOOL close_handle()
 {
   CloseHandle(hObject);
-  return CloseHandle(hProcess);
+  return CloseHandle(pi.hProcess);
 }
 
 //----- (00406860) --------------------------------------------------------
-int __cdecl sub_406860(int a1, LPDWORD lpExitCode)
+BOOL __cdecl RunSilentProcess(int a1, DWORD dwExitCode)
 {
-  size_t v2; // eax@1
-  int result; // eax@3
-  CHAR CommandLine[2]; // [sp+30h] [bp-8068h]@1
-  struct _STARTUPINFOA StartupInfo; // [sp+8030h] [bp-68h]@1
+    size_t v2; // eax@1
+    CHAR CommandLine[2]; // [sp+30h] [bp-8068h]@1
 
-  memset(&hProcess, 0, 0x10u);
-  memset(&StartupInfo, 0, 0x44u);
-  StartupInfo.cb = 68;
-  memset(CommandLine, 0, 0x8000u);
-  strcpy(CommandLine, "\"");
-  strcat(CommandLine, word_40A1A4);
-  v2 = strlen(CommandLine);
-  *(uint16_t *)&CommandLine[v2] = 8226;
-  CommandLine[v2 + 2] = 0;
-  strcat(CommandLine, dword_40A2A8);
-  if ( CreateProcessA(0, CommandLine, 0, 0, 1, dwCreationFlags, 0, 0, &StartupInfo, (LPPROCESS_INFORMATION)&hProcess) )
-  {
-    if ( a1 )
+    STARTUPINFO si;
+    RtlZeroMemory(&si, sizeof(si));
+    RtlZeroMemory(&pi, sizeof(pi));
+    si.cb = sizeof(si);
+
+    RtlZeroMemory(&CommandLine, 0x8000u);//
+    strcpy(CommandLine, "\""); //
+    strcat(CommandLine, word_40A1A4); //
+    v2 = strlen(CommandLine); //
+    *(uint16_t *)&CommandLine[v2] = 8226; //
+    CommandLine[v2 + 2] = 0; //
+    strcat(CommandLine, dword_40A2A8); //
+    if ( CreateProcess(NULL, CommandLine, NULL, NULL, TRUE, dwCreationFlags, NULL, NULL, &si, &pi) )
     {
-      WaitForSingleObject(hProcess, 0xFFFFFFFF);
-      GetExitCodeProcess(hProcess, lpExitCode);
-      CloseHandle(hObject);
-      CloseHandle(hProcess);
-      result = 1;
+        if ( a1 ) //
+        {
+            WaitForSingleObject(pi.hProcess, INFINITE);
+            GetExitCodeProcess(pi.hProcess, &dwExitCode);
+        }
+        else
+        {
+            GetExitCodeProcess(pi.hProcess, 0);
+        }
+        CloseHandle(hObject);
+        CloseHandle(pi.hProcess);
+        return TRUE;
     }
-    else
-    {
-      result = 1;
-      *lpExitCode = 0;
-    }
-  }
-  else
-  {
-    result = 0;
-    *lpExitCode = -1;
-  }
-  return result;
+
+    GetExitCodeProcess(pi.hProcess, -1);
+    CloseHandle(hObject);
+    CloseHandle(pi.hProcess);
+    return FALSE;
 }
 
 //----- (00406B70) --------------------------------------------------------

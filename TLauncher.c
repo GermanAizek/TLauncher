@@ -1,5 +1,11 @@
 #include "TLauncher.h"
 
+typedef struct tagWNDINFO
+{
+    DWORD	dwProcessId;
+    HWND	hWnd;
+} WNDINFO, * LPWNDINFO;
+
 FILE* file;
 PROCESS_INFORMATION pi;
 
@@ -7,9 +13,7 @@ int dword_407070[] = { 4294967295 }; // weak
 int dword_407074[] = { 0 }; // weak
 int dword_408000 = 60; // weak
 int (*off_408030)[97] = // &dword_40707C; // weak
-const CHAR WindowName = '\0'; // idb
-int dword_40A010; // weak
-int dword_40A014; // weak
+int dword_40A014 = 0; // weak
 int dword_40A018; // weak
 DWORD ExitCode; // idb
 int dword_40A020; // weak
@@ -91,7 +95,7 @@ int CALLBACK sub_4013B0(HINSTANCE hInstance, int a2, char *a3, int nCmdShow)
 LABEL_48:
       v14 = 0;
     }
-    ShowWindow(v14, 5);
+    ShowWindow(v14, SW_SHOW);
     SetForegroundWindow(v14);
     file_close();
     return 2;
@@ -107,14 +111,14 @@ LABEL_3:
     v6 = 1;
   dword_40A014 = v6;
   v7 = 0;
-  dword_40A010 = sub_4021A0(31);
+  int dword_40A010 = sub_4021A0(31);
   if ( dword_40A010 || sub_4021A0(11) && !strstr(a3, "--l4j-dont-wait") )
     v7 = 1;
   dword_40A018 = v7;
   v8 = dword_40A014;
   if ( !dword_40A014 && !v7 )
     goto LABEL_42;
-  hWnd = CreateWindowExA(0x80u, "STATIC", &WindowName, 0x8000000E, 0, 0, 2147483648, 2147483648, 0, 0, hInstance, 0);
+  hWnd = CreateWindowEx(0x80u, "STATIC", '\0', 0x8000000E, 0, 0, 2147483648, 2147483648, 0, 0, hInstance, 0);
   if ( dword_40A014 )
   {
     memset(&v17, 0, 8u);
@@ -193,31 +197,20 @@ LABEL_42:
 // 40A060: using guessed type int dword_40A060;
 // 40A080: using guessed type int dword_40A080;
 
-/*
-BOOL CALLBACK MyEnumProc(HWND hWnd, LPARAM lParam)
+BOOL CALLBACK EnumFunc(HWND hWnd, LPARAM lParam)
 {
     DWORD dwProcessId;
+    GetWindowThreadProcessId(hWnd, &dwProcessId);
     LPWNDINFO pInfo = (LPWNDINFO)lParam;
-    GetWindowThreadProcessId(hWnd, &dwProcessId);
+    if (dwProcessId == pInfo->dwProcessId)
+    {
+        bool isWindowVisible = IsWindowVisible(hWnd);
+        if (isWindowVisible == true)
+        {
+            pInfo->hWnd = hWnd;
+            return FALSE;
+        }
 
-    if( dwProcessId == pInfo->dwProcessId )
-    {
-        pInfo->hWnd = hWnd;
-        return FALSE;
-    }
-    return TRUE;
-}
-*/
-// https://github.com/wswm2009/DLLSrc_MFC/blob/ef37d8bd549baacbb4201e9d20590fdc059353dd/MfcDLLHook/MfcDLLHook/MainDlg.cpp
-BOOL CALLBACK EnumFunc(HWND hWnd, LPARAM a2)
-{
-    DWORD dwProcessId;
-    GetWindowThreadProcessId(hWnd, &dwProcessId);
-    if ( dword_4122B8 == dwProcessId && (GetWindowLongA(hWnd, GWL_STYLE) & WS_VISIBLE))
-    {
-        dword_40A014 = 0; // pInfo->hWnd
-        ShowWindow(hWnd, 0);
-        return FALSE;
     }
     return TRUE;
 }
@@ -233,12 +226,15 @@ void CALLBACK TimerFunc(HWND hWnd, UINT a2, UINT a3, DWORD a4)
     {
       dword_408000 -= 100;
       if ( dword_40A060 )
-        EnumWindows(EnumFunc, 0);
+        WNDINFO wi;
+        wi.dwProcessId = dwProcessId;
+        wi.hWnd = NULL;
+        EnumWindows(EnumFunc, (LPARAM)&wi);
     }
     else
     {
       dword_40A014 = 0;
-      ShowWindow(hWnd, 0);
+      ShowWindow(hWnd, SW_HIDE);
       if ( dword_40A060 && dword_40A080 )
       {
         KillTimer(hWnd, 1);
@@ -247,7 +243,7 @@ void CALLBACK TimerFunc(HWND hWnd, UINT a2, UINT a3, DWORD a4)
       }
     }
   }
-  GetExitCodeProcess(pi, &ExitCode);
+  GetExitCodeProcess(pi.hProcess, &ExitCode);
   if ( ExitCode != 259 || !dword_40A014 && !dword_40A018 )
   {
     KillTimer(hWnd, 1);
@@ -350,13 +346,13 @@ FILE *sub_401ED0()
   }
   else
   {
-    MessageBoxA(0, Text, Caption, 0);
+    MessageBoxA(NULL, Text, Caption, MB_OK);
   }
   if ( File )
   {
     if ( file )
       fprintf(file, "Open URL:\t%s\n", &File);
-    ShellExecuteA(0, "open", &File, 0, 0, 1);
+    ShellExecute(NULL, "open", &File, NULL, NULL, SW_SHOWNORMAL);
   }
   result = file;
   if ( file )
@@ -917,7 +913,7 @@ char *__cdecl sub_403100(char *a1, char *a2, char *a3, int a4)
             while ( v12 );
             if ( v12 )
             {
-              strcat(a1, ::Buffer);
+              strcat(a1, Buffer);
             }
             else
             {

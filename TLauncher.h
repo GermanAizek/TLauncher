@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
+//#include <shlwapi.h>
 
 int CALLBACK sub_4013B0(HINSTANCE hInstance, int, char*, int nCmdShow);
 BOOL CALLBACK EnumFunc(HWND, LPARAM);
